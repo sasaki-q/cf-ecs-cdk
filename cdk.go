@@ -10,6 +10,8 @@ import (
 	resource "cdk/resources"
 )
 
+const ARG = "ENV"
+
 type IResource[T any] interface {
 	New() T
 }
@@ -22,16 +24,21 @@ type ContainerConfig struct {
 	}
 }
 
+type GithubConfig struct {
+	owner       string
+	repository  string
+	accessToken string
+}
+
 type Config struct {
-	domainname string
-	beConfig   ContainerConfig
+	domainname   string
+	githubConfig GithubConfig
+	beConfig     ContainerConfig
 }
 
 type CdkStackProps struct {
 	awscdk.StackProps
 }
-
-const ARG = "ENV"
 
 func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps, config Config) awscdk.Stack {
 	var sprops awscdk.StackProps
@@ -39,33 +46,43 @@ func NewCdkStack(scope constructs.Construct, id string, props *CdkStackProps, co
 		sprops = props.StackProps
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
-
-	var networkService IResource[resource.NetworkResource] = &resource.NetworkService{Stack: stack}
-	var networkResource = networkService.New()
-	var dnsService IResource[resource.DnsResource] = &resource.DnsService{Stack: stack, DomainName: config.domainname}
-	var dnsResource = dnsService.New()
-	var containerService IResource[resource.ContainerResource] = &resource.ContainerService{
-		Stack: stack,
-		Vpc:   networkResource.Vpc,
-		Config: struct {
-			RepositoryName string
-			BucketName     string
-			LogGroupName   string
-		}{
-			RepositoryName: config.beConfig.repository,
-			BucketName:     config.beConfig.log.bucket,
-			LogGroupName:   config.beConfig.log.logGroup,
-		},
+	// var networkService IResource[resource.NetworkResource] = &resource.NetworkService{Stack: stack}
+	// var networkResource = networkService.New()
+	// var databaseService IResource[resource.DatabaseResource] = &resource.DatabaseService{Stack: stack, Vpc: networkResource.Vpc}
+	// databaseService.New()
+	// var dnsService IResource[resource.DnsResource] = &resource.DnsService{Stack: stack, DomainName: config.domainname}
+	// var dnsResource = dnsService.New()
+	// var containerService IResource[resource.ContainerResource] = &resource.ContainerService{
+	// 	Stack: stack,
+	// 	Vpc:   networkResource.Vpc,
+	// 	Config: struct {
+	// 		RepositoryName string
+	// 		BucketName     string
+	// 		LogGroupName   string
+	// 	}{
+	// 		RepositoryName: config.beConfig.repository,
+	// 		BucketName:     config.beConfig.log.bucket,
+	// 		LogGroupName:   config.beConfig.log.logGroup,
+	// 	},
+	// }
+	// var containerResource = containerService.New()
+	// var albService IResource[resource.LoadBalancerResource] = &resource.LoadBalancerService{
+	// 	Stack:          stack,
+	// 	Cert:           dnsResource.Cert,
+	// 	Vpc:            networkResource.Vpc,
+	// 	FargateService: containerResource.Fargate,
+	// }
+	// var albResource = albService.New()
+	// resource.NewARecord(stack, dnsResource.Zone, albResource.Alb)
+	// var cloudfrontService IResource[resource.CloudfrontResource] = &resource.CloudfrontService{Stack: stack}
+	// cloudfrontService.New()
+	var amplifyService IResource[resource.AmplifyResource] = &resource.AmplifyService{
+		Stack:       stack,
+		Owner:       config.githubConfig.owner,
+		Repository:  config.githubConfig.repository,
+		AccessToken: config.githubConfig.accessToken,
 	}
-	var containerResource = containerService.New()
-	var albService IResource[resource.LoadBalancerResource] = &resource.LoadBalancerService{
-		Stack:          stack,
-		Cert:           dnsResource.Cert,
-		Vpc:            networkResource.Vpc,
-		FargateService: containerResource.Fargate,
-	}
-	var albResource = albService.New()
-	resource.NewARecord(stack, dnsResource.Zone, albResource.Alb)
+	amplifyService.New()
 	return stack
 }
 
@@ -85,7 +102,8 @@ func main() {
 
 	awscdk.Tags_Of(app).Add(jsii.String("Project"), jsii.String("CDK-GO"), nil)
 	awscdk.Tags_Of(app).Add(jsii.String("Env"), jsii.String(fmt.Sprintf("%s", env)), nil)
-	beConfig := envVal["beconf"].(map[string]interface{})
+	ecsConfig := envVal["ecs_conf"].(map[string]interface{})
+	ghConfig := envVal["github_conf"].(map[string]interface{})
 
 	NewCdkStack(app, "CdkStack",
 		&CdkStackProps{
@@ -103,14 +121,19 @@ func main() {
 		},
 		Config{
 			domainname: envVal["domainname"].(string),
+			githubConfig: GithubConfig{
+				owner:       ghConfig["owner"].(string),
+				repository:  ghConfig["repository"].(string),
+				accessToken: ghConfig["access_token"].(string),
+			},
 			beConfig: ContainerConfig{
-				repository: beConfig["repository"].(string),
+				repository: ecsConfig["repository"].(string),
 				log: struct {
 					bucket   string
 					logGroup string
 				}{
-					bucket:   beConfig["log"].(map[string]interface{})["bucket"].(string),
-					logGroup: beConfig["log"].(map[string]interface{})["group"].(string),
+					bucket:   ecsConfig["log"].(map[string]interface{})["bucket"].(string),
+					logGroup: ecsConfig["log"].(map[string]interface{})["group"].(string),
 				},
 			},
 		},

@@ -79,7 +79,7 @@ func (s *ContainerService) New() ContainerResource {
 			DesiredCount:         jsii.Number(1),
 			ServiceName:          jsii.String("CdkService"),
 			TaskDefinition:       taskDef,
-			VpcSubnets:           &ec2.SubnetSelection{SubnetType: ec2.SubnetType_PRIVATE_ISOLATED},
+			VpcSubnets:           &ec2.SubnetSelection{SubnetType: ec2.SubnetType_PRIVATE_WITH_NAT},
 		},
 	)
 
