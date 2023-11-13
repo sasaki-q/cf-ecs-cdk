@@ -8,32 +8,36 @@ import (
 )
 
 type DatabaseService struct {
-	Stack cdk.Stack
-	Vpc   ec2.Vpc
+	Stack           cdk.Stack
+	Vpc             ec2.Vpc
+	SubnetGroupName string
 }
 
 type DatabaseResource struct {
-	Rds rds.DatabaseCluster
+	Rds        rds.DatabaseCluster
+	Credential rds.Credentials
 }
 
 func (s *DatabaseService) New() DatabaseResource {
+	credential := rds.Credentials_FromGeneratedSecret(jsii.String("clusteradmin"), &rds.CredentialsBaseOptions{})
+
 	dbCluster := rds.NewDatabaseCluster(s.Stack, jsii.String("rds"), &rds.DatabaseClusterProps{
 		Engine: rds.DatabaseClusterEngine_AuroraPostgres(&rds.AuroraPostgresClusterEngineProps{
 			Version: rds.AuroraPostgresEngineVersion_VER_14_3(),
 		}),
-		Vpc:               s.Vpc,
-		ClusterIdentifier: jsii.String("CdkPostgres"),
-		VpcSubnets: &ec2.SubnetSelection{
-			SubnetType: ec2.SubnetType_PRIVATE_ISOLATED,
-		},
-		DefaultDatabaseName: jsii.String("cdk-db"),
+		ClusterIdentifier:   jsii.String("CdkPostgres"),
+		Credentials:         credential,
+		DefaultDatabaseName: jsii.String("sample"),
 		InstanceProps: &rds.InstanceProps{
-			InstanceType: ec2.InstanceType_Of(ec2.InstanceClass_BURSTABLE2, ec2.InstanceSize_SMALL),
+			InstanceType: ec2.InstanceType_Of(ec2.InstanceClass_T3, ec2.InstanceSize_MEDIUM),
 			VpcSubnets: &ec2.SubnetSelection{
-				SubnetType: ec2.SubnetType_PRIVATE_WITH_NAT,
+				SubnetGroupName: jsii.String(s.SubnetGroupName),
 			},
 			Vpc: s.Vpc,
 		},
 	})
-	return DatabaseResource{Rds: dbCluster}
+	return DatabaseResource{
+		Rds:        dbCluster,
+		Credential: credential,
+	}
 }

@@ -80,6 +80,15 @@ func (s *ContainerService) New() ContainerResource {
 			ServiceName:          jsii.String("CdkService"),
 			TaskDefinition:       taskDef,
 			VpcSubnets:           &ec2.SubnetSelection{SubnetType: ec2.SubnetType_PRIVATE_WITH_NAT},
+			ServiceConnectConfiguration: &ecs.ServiceConnectProps{
+				Services: &[]*ecs.ServiceConnectService{
+					{
+						PortMappingName: jsii.String("api"),
+						DnsName:         jsii.String("inter-api"),
+						Port:            jsii.Number(80),
+					},
+				},
+			},
 		},
 	)
 

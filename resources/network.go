@@ -7,7 +7,8 @@ import (
 )
 
 type NetworkService struct {
-	Stack cdk.Stack
+	Stack         cdk.Stack
+	SubnetOptions map[string]string
 }
 
 type NetworkResource struct {
@@ -18,12 +19,17 @@ func (s *NetworkService) New() NetworkResource {
 	vpc := ec2.NewVpc(s.Stack, jsii.String("CdkVpc"), &ec2.VpcProps{
 		SubnetConfiguration: &[]*ec2.SubnetConfiguration{
 			{
-				Name:       jsii.String("Public"),
+				Name:       jsii.String(s.SubnetOptions["Public"]),
 				CidrMask:   jsii.Number(24),
 				SubnetType: ec2.SubnetType_PUBLIC,
 			},
 			{
-				Name:       jsii.String("Private"),
+				Name:       jsii.String(s.SubnetOptions["Private"]),
+				CidrMask:   jsii.Number(24),
+				SubnetType: ec2.SubnetType_PRIVATE_ISOLATED,
+			},
+			{
+				Name:       jsii.String(s.SubnetOptions["DB_Private"]),
 				CidrMask:   jsii.Number(24),
 				SubnetType: ec2.SubnetType_PRIVATE_ISOLATED,
 			},

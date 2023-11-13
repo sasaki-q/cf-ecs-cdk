@@ -1,4 +1,4 @@
-package resource
+package dns
 
 import (
 	cdk "github.com/aws/aws-cdk-go/awscdk/v2"
@@ -10,17 +10,17 @@ import (
 	"github.com/aws/jsii-runtime-go"
 )
 
-type DnsService struct {
+type PublicHostZoneService struct {
 	Stack      cdk.Stack
 	DomainName string
 }
 
-type DnsResource struct {
+type PublicHostZoneResource struct {
 	Cert acm.ICertificate
 	Zone route53.HostedZone
 }
 
-func (s *DnsService) New() DnsResource {
+func (s *PublicHostZoneService) New() PublicHostZoneResource {
 	zone := route53.NewPublicHostedZone(s.Stack, jsii.String("route53"), &route53.PublicHostedZoneProps{
 		ZoneName: jsii.String(s.DomainName),
 	})
@@ -30,7 +30,7 @@ func (s *DnsService) New() DnsResource {
 		Validation:      acm.CertificateValidation_FromDns(zone),
 	})
 
-	return DnsResource{Cert: myacm, Zone: zone}
+	return PublicHostZoneResource{Cert: myacm, Zone: zone}
 }
 
 func NewARecord(
